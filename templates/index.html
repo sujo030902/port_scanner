@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recon Scanner</title>
+<style>
+  :root {
+    --bg-primary: #0d1117;
+    --bg-secondary: #161b22;
+    --bg-tertiary: #21262d;
+    --border: #30363d;
+    --text-primary: #e6edf3;
+    --text-secondary: #8b949e;
+    --accent-green: #3fb950;
+    --accent-red: #f85149;
+    --accent-blue: #58a6ff;
+    --accent-yellow: #d29922;
+    --accent-purple: #bc8cff;
+    --accent-cyan: #39d2c0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 960px;
+    padding: 20px;
+  }
+
+  .header {
+    text-align: center;
+    padding: 30px 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 30px;
+  }
+
+  .header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 2px;
+  }
+
+  .header h1 span.green { color: var(--accent-green); }
+  .header h1 span.blue { color: var(--accent-blue); }
+  .header h1 span.purple { color: var(--accent-purple); }
+  .header h1 span.cyan { color: var(--accent-cyan); }
+
+  .header .subtitle {
+    color: var(--text-secondary);
+    font-size: 13px;
+    margin-top: 8px;
+    letter-spacing: 1px;
+  }
+
+  .header .subtitle span { color: var(--accent-yellow); }
+
+  .card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+
+  .card h2 {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--accent-blue);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .form-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+
+  .form-group {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+  }
+
+  .form-group input,
+  .form-group select {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .form-group input:focus,
+  .form-group select:focus {
+    border-color: var(--accent-blue);
+  }
+
+  .form-group select option {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+  }
+
+  .form-group input::placeholder {
+    color: var(--text-secondary);
+  }
+
+  .range-input { display: none; }
+
+  .btn {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  .btn:hover { opacity: 0.85; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-primary {
+    background: var(--accent-green);
+    color: #0d1117;
+  }
+
+  .btn-danger {
+    background: var(--accent-red);
+    color: #fff;
+  }
+
+  .btn-secondary {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+  }
+
+  .status-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 16px;
+    font-size: 13px;
+  }
+
+  .status-bar .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .status-bar .dot.idle { background: var(--text-secondary); }
+  .status-bar .dot.running { background: var(--accent-yellow); animation: pulse 1s infinite; }
+  .status-bar .dot.complete { background: var(--accent-green); }
+  .status-bar .dot.error { background: var(--accent-red); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .progress-container {
+    width: 100%;
+    height: 6px;
+    background: var(--bg-primary);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  .progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
+    border-radius: 3px;
+    transition: width 0.3s;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .stat-item {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    text-align: center;
+  }
+
+  .stat-item .value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent-cyan);
+  }
+
+  .stat-item .label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+
+  .scan-info {
+    font-size: 12px;
+    color: var(--text-secondary);
+    padding: 8px 0;
+  }
+
+  .scan-info strong { color: var(--text-primary); }
+
+  .table-container {
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  thead th {
+    text-align: left;
+    padding: 10px 12px;
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody tr:hover {
+    background: var(--bg-tertiary);
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .port-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    background: rgba(57, 210, 192, 0.1);
+    color: var(--accent-cyan);
+    border: 1px solid rgba(57, 210, 192, 0.3);
+    border-radius: 4px;
+    font-weight: 600;
+  }
+
+  .service-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    background: rgba(188, 140, 255, 0.1);
+    color: var(--accent-purple);
+    border: 1px solid rgba(188, 140, 255, 0.3);
+    border-radius: 4px;
+    font-size: 12px;
+  }
+
+  .banner-text {
+    color: var(--text-secondary);
+    font-size: 12px;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .banner-text.has-banner {
+    color: var(--accent-yellow);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+  }
+
+  .empty-state .icon {
+    font-size: 40px;
+    margin-bottom: 12px;
+    opacity: 0.3;
+  }
+
+  .target-info {
+    font-size: 12px;
+    color: var(--text-secondary);
+    padding: 8px 12px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-bottom: 12px;
+  }
+
+  .btn-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+
+  .history-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: border-color 0.2s;
+    cursor: pointer;
+  }
+
+  .history-item:hover { border-color: var(--accent-blue); }
+
+  .history-item .hi-target { font-weight: 600; }
+  .history-item .hi-meta { color: var(--text-secondary); font-size: 11px; margin-top: 2px; }
+  .history-item .hi-ports { color: var(--accent-cyan); font-weight: 600; }
+
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 20px;
+    font-size: 13px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    display: none;
+    z-index: 100;
+  }
+
+  .toast.show { display: block; }
+  .toast.error { border-color: var(--accent-red); }
+  .toast.success { border-color: var(--accent-green); }
+  .toast .toast-title { font-weight: 600; margin-bottom: 4px; }
+  .toast.error .toast-title { color: var(--accent-red); }
+  .toast.success .toast-title { color: var(--accent-green); }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>
+      <span class="green">[</span>
+      <span class="blue">Recon</span>
+      <span class="purple">Scanner</span>
+      <span class="green">]</span>
+    </h1>
+    <div class="subtitle">Port Scanning &amp; <span>Service Detection</span> Tool</div>
+  </div>
+
+  <div class="card">
+    <h2>Target Configuration</h2>
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label>Target</label>
+        <input type="text" id="target" placeholder="IP address or domain (e.g. 192.168.1.1 or scanme.nmap.org)">
+      </div>
+      <div class="form-group" style="flex:1">
+        <label>Scan Type</label>
+        <select id="scanType" onchange="toggleRange()">
+          <option value="quick">Quick (Top 30)</option>
+          <option value="common" selected>Common Ports</option>
+          <option value="full">Full (1-10000)</option>
+          <option value="custom">Custom Range</option>
+        </select>
+      </div>
+      <div class="form-group range-input" id="rangeGroup" style="flex:1">
+        <label>Port Range</label>
+        <input type="text" id="portRange" placeholder="e.g. 1-1000" value="1-1000">
+      </div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" id="scanBtn" onclick="startScan()">Start Scan</button>
+    </div>
+  </div>
+
+  <div class="card" id="resultsCard" style="display:none">
+    <h2>Scan Results</h2>
+
+    <div class="status-bar" id="statusBar">
+      <span class="dot idle" id="statusDot"></span>
+      <span id="statusText">Ready</span>
+    </div>
+
+    <div class="progress-container" id="progressContainer" style="display:none">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <div class="target-info" id="targetInfo"></div>
+
+    <div class="stats-grid" id="statsGrid" style="display:none">
+      <div class="stat-item">
+        <div class="value" id="statOpen">0</div>
+        <div class="label">Open Ports</div>
+      </div>
+      <div class="stat-item">
+        <div class="value" id="statScanned">0</div>
+        <div class="label">Scanned</div>
+      </div>
+      <div class="stat-item">
+        <div class="value" id="statTotal">0</div>
+        <div class="label">Total</div>
+      </div>
+      <div class="stat-item">
+        <div class="value" id="statElapsed">0s</div>
+        <div class="label">Elapsed</div>
+      </div>
+    </div>
+
+    <div id="resultsBody">
+      <div class="empty-state">
+        <div class="icon">&#9783;</div>
+        <div>No results yet. Start a scan to see open ports.</div>
+      </div>
+    </div>
+
+    <div class="btn-group" id="actionBtns" style="display:none">
+      <button class="btn btn-secondary" onclick="downloadReport()">Download Report</button>
+      <button class="btn btn-secondary" id="viewResultsBtn" style="display:none" onclick="viewResults()">View Results Page</button>
+      <button class="btn btn-danger" id="stopBtn" style="display:none" onclick="stopScan()">Stop Scan</button>
+    </div>
+  </div>
+
+  <div class="card" id="historyCard">
+    <h2>Scan History</h2>
+    <div id="historyList">
+      <div class="empty-state">
+        <div class="icon">&#9783;</div>
+        <div>No scans yet.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <div class="toast-title" id="toastTitle"></div>
+  <div id="toastMsg"></div>
+</div>
+
+<script>
+  let currentScanId = null;
+  let pollInterval = null;
+  let reportReady = false;
+
+  function toggleRange() {
+    const type = document.getElementById('scanType').value;
+    document.getElementById('rangeGroup').style.display = type === 'custom' ? 'block' : 'none';
+  }
+
+  function showToast(title, msg, type) {
+    const t = document.getElementById('toast');
+    t.className = 'toast ' + type + ' show';
+    document.getElementById('toastTitle').textContent = title;
+    document.getElementById('toastMsg').textContent = msg;
+    setTimeout(() => t.classList.remove('show'), 4000);
+  }
+
+  function setStatus(state, text) {
+    const dot = document.getElementById('statusDot');
+    const txt = document.getElementById('statusText');
+    dot.className = 'dot ' + state;
+    txt.textContent = text;
+  }
+
+  function updateProgress(pct) {
+    document.getElementById('progressContainer').style.display = 'block';
+    document.getElementById('progressBar').style.width = Math.min(pct, 100) + '%';
+  }
+
+  function renderResults(results, target, ip) {
+    const container = document.getElementById('resultsBody');
+    document.getElementById('targetInfo').innerHTML = '<strong>Target:</strong> ' + target + ' <strong>IP:</strong> ' + ip;
+
+    if (!results || results.length === 0) {
+      container.innerHTML = '<div class="empty-state"><div class="icon">&#9783;</div><div>No open ports found.</div></div>';
+      return;
+    }
+
+    let html = '<div class="table-container"><table><thead><tr><th>Port</th><th>Service</th><th>Banner</th></tr></thead><tbody>';
+    for (const r of results) {
+      const bannerClass = r.banner && r.banner !== 'No banner' ? 'has-banner' : '';
+      html += '<tr>' +
+        '<td><span class="port-badge">' + r.port + '</span></td>' +
+        '<td><span class="service-tag">' + r.service + '</span></td>' +
+        '<td><div class="banner-text ' + bannerClass + '">' + (r.banner && r.banner !== 'No banner' ? r.banner : '-') + '</div></td>' +
+        '</tr>';
+    }
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+  }
+
+  function startScan() {
+    const target = document.getElementById('target').value.trim();
+    const scanType = document.getElementById('scanType').value;
+
+    if (!target) {
+      showToast('Error', 'Please enter a target IP or domain', 'error');
+      return;
+    }
+
+    const payload = { target: target, type: scanType };
+    if (scanType === 'custom') {
+      payload.range = document.getElementById('portRange').value.trim();
+      if (!payload.range) {
+        showToast('Error', 'Please enter a port range', 'error');
+        return;
+      }
+    }
+
+    document.getElementById('scanBtn').disabled = true;
+    document.getElementById('resultsCard').style.display = 'block';
+    setStatus('running', 'Scanning...');
+    updateProgress(0);
+    document.getElementById('statsGrid').style.display = 'grid';
+    document.getElementById('actionBtns').style.display = 'flex';
+    document.getElementById('stopBtn').style.display = 'inline-block';
+    document.getElementById('viewResultsBtn').style.display = 'none';
+    document.getElementById('progressContainer').style.display = 'block';
+
+    reportReady = false;
+
+    fetch('/api/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) {
+        showToast('Error', data.error, 'error');
+        setStatus('error', 'Error');
+        document.getElementById('scanBtn').disabled = false;
+        document.getElementById('stopBtn').style.display = 'none';
+        return;
+      }
+      currentScanId = data.scan_id;
+      pollInterval = setInterval(() => pollScan(currentScanId), 500);
+    })
+    .catch(err => {
+      showToast('Error', 'Failed to start scan: ' + err.message, 'error');
+      setStatus('error', 'Error');
+      document.getElementById('scanBtn').disabled = false;
+      document.getElementById('stopBtn').style.display = 'none';
+    });
+  }
+
+  function pollScan(scanId) {
+    fetch('/api/scan/' + scanId)
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) {
+        clearInterval(pollInterval);
+        setStatus('error', 'Error');
+        document.getElementById('scanBtn').disabled = false;
+        document.getElementById('stopBtn').style.display = 'none';
+        return;
+      }
+
+      const pct = data.total > 0 ? (data.scanned / data.total) * 100 : 0;
+      updateProgress(pct);
+      document.getElementById('statScanned').textContent = data.scanned;
+      document.getElementById('statTotal').textContent = data.total;
+      document.getElementById('statOpen').textContent = data.results ? data.results.length : 0;
+      document.getElementById('statElapsed').textContent = data.elapsed ? data.elapsed + 's' : '0s';
+
+      if (data.results && data.results.length > 0) {
+        renderResults(data.results, data.target, data.ip);
+      }
+
+      if (data.status === 'complete') {
+        clearInterval(pollInterval);
+        setStatus('complete', 'Scan Complete - ' + data.results.length + ' open ports found');
+        updateScanCompleteUI(scanId, data.results.length, data.elapsed);
+      } else if (data.status === 'error') {
+        clearInterval(pollInterval);
+        setStatus('error', data.error || 'Scan failed');
+        document.getElementById('scanBtn').disabled = false;
+        document.getElementById('stopBtn').style.display = 'none';
+        showToast('Error', data.error || 'Scan failed', 'error');
+      }
+    })
+    .catch(err => {
+      clearInterval(pollInterval);
+      setStatus('error', 'Connection lost');
+      document.getElementById('scanBtn').disabled = false;
+      document.getElementById('stopBtn').style.display = 'none';
+    });
+  }
+
+  function stopScan() {
+    if (!currentScanId) return;
+
+    fetch('/api/scan/' + currentScanId + '/stop', { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === 'stopped') {
+        clearInterval(pollInterval);
+        setStatus('error', 'Stopped by user');
+        document.getElementById('scanBtn').disabled = false;
+        document.getElementById('stopBtn').style.display = 'none';
+        showToast('', 'Scan stopped by user', 'error');
+      }
+    })
+    .catch(err => {
+      showToast('Error', 'Failed to stop scan', 'error');
+    });
+  }
+
+  function downloadReport() {
+    if (!currentScanId) return;
+
+    fetch('/api/scan/' + currentScanId + '/report')
+    .then(r => {
+      if (!r.ok) throw new Error('Report not ready');
+      return r.blob();
+    })
+    .then(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'scan_report.txt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    })
+    .catch(err => {
+      showToast('Error', 'Report not available yet', 'error');
+    });
+  }
+
+  function viewResults() {
+    if (currentScanId) {
+      window.open('/results/' + currentScanId, '_blank');
+    }
+  }
+
+  function loadHistory() {
+    fetch('/api/scans')
+    .then(r => r.json())
+    .then(data => {
+      const container = document.getElementById('historyList');
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">&#9783;</div><div>No scans yet.</div></div>';
+        return;
+      }
+      let html = '';
+      for (const h of data) {
+        const label = h.status === 'complete' ? h.open_ports + ' open' : h.status;
+        html += '<a href="/results/' + h.scan_id + '" class="history-item">' +
+          '<div>' +
+            '<div class="hi-target">' + h.target + '</div>' +
+            '<div class="hi-meta">' + (h.created_at ? h.created_at.slice(0, 19).replace('T', ' ') : '') + '</div>' +
+          '</div>' +
+          '<div>' +
+            '<div class="hi-ports">' + label + '</div>' +
+            '<div class="hi-meta" style="text-align:right">' + h.elapsed + 's</div>' +
+          '</div>' +
+        '</a>';
+      }
+      container.innerHTML = html;
+    })
+    .catch(() => {});
+  }
+
+  function updateScanCompleteUI(scanId, openPorts, elapsed) {
+    document.getElementById('scanBtn').disabled = false;
+    document.getElementById('stopBtn').style.display = 'none';
+    document.getElementById('viewResultsBtn').style.display = 'inline-block';
+    updateProgress(100);
+    reportReady = true;
+    showToast('Success', 'Scan completed in ' + elapsed + 's', 'success');
+    loadHistory();
+  }
+
+  document.getElementById('target').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') startScan();
+  });
+
+  loadHistory();
+</script>
+</body>
+</html>
